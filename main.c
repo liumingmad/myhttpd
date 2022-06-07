@@ -11,6 +11,8 @@
 #include "wrap.h"
 #include "utils.h"
 #include "mq.h"
+#include "http.h"
+#include "business.h"
 
 #define DEBUG 1
 #define SERV_PORT 8010
@@ -37,6 +39,7 @@ int product(int fd);
 void* custom(void*);
 
 int handle_request(struct Message *msg);
+void make_response(struct Message *msg);
 void print_request(struct Message *msg);
 void destory();
 
@@ -119,6 +122,7 @@ void init_socket() {
 }
 
 int product(int fd) {
+    // TODO:如果数量量大，则多次读取
     char* buf = malloc(MAX_HTTP_REQUEST_LEN);
     bzero(buf, MAX_HTTP_REQUEST_LEN);
     int n = Read(fd, buf, MAX_HTTP_REQUEST_LEN);
@@ -165,12 +169,26 @@ void* custom(void* x) {
 int handle_request(struct Message *msg) {
     if (DEBUG) print_request(msg);
 
-    return n;
+    struct Response resp;
+    struct Request req;
+    to_request(msg->msg, &req);
+
+    if (req.method == GET) {
+        handle_get(&req, &resp);
+    } else {
+        printf("Error: Unsuport method\n");
+    }
+
+    char buf[MAX_HTTP_RESPONSE_LEN];
+    bzero(buf, MAX_HTTP_RESPONSE_LEN);
+    to_response_text(&resp, buf);
+    send_response(msg->fd, buf);
+
+    return 0;
 }
 
-void make_response() {
-    const char resp_buf[2048];
-    Write(msg->fd, resp_buf, );
+void send_response(int fd, char *msg) {
+    Write(msg->fd, resp_buf, strlen(msg));
 }
 
 void print_request(struct Message *msg) {
